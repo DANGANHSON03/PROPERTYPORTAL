@@ -12,49 +12,56 @@ namespace PropertyPortal.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IPermissionService _permService;
     private readonly IJwtTokenService _jwt;
-
-    public AuthController(IPermissionService permService, IJwtTokenService jwt)
-    {
-        _permService = permService;
-        _jwt = jwt;
-    }
+    public AuthController(IJwtTokenService jwt) => _jwt = jwt;
 
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<IActionResult> Login([FromBody] LoginModel model)
+    public async Task<IActionResult> Login([FromBody] LoginModel model, [FromServices] IPermissionService permService)
     {
-        var user = await _permService.GetUserByEmailAsync(model.Email);
+        var user = await permService.GetUserByEmailAsync(model.Email);
         if (user is null)
-            return Unauthorized(ApiResult<object>.Fail("Email hoặc mật khẩu không đúng."));
+            return Unauthorized(ApiResponse<object>.Fail("Email hoặc mật khẩu không đúng."));
 
         var (userId, email, roleId, passwordHash) = user.Value;
         if (!PasswordHasher.Verify(model.Password, passwordHash))
-            return Unauthorized(ApiResult<object>.Fail("Email hoặc mật khẩu không đúng."));
+            return Unauthorized(ApiResponse<object>.Fail("Email hoặc mật khẩu không đúng."));
 
-        var perms = await _permService.GetPermissionsAsync(userId);
-        var token = _jwt.CreateToken(userId, email, perms);
+        var roleName = RoleHelper.ToName(roleId);
+        var perms    = await permService.GetPermissionsAsync(userId);
 
-        return Ok(ApiResult<object>.Ok(new { token, permissions = perms }, "Đăng nhập thành công"));
+        var token = _jwt.CreateToken(userId, email, roleId, roleName, perms);
+
+        var data = new
+        {
+            token,
+            roleId,
+            role = roleName,
+            permissions = perms
+        };
+        return Ok(ApiResponse<object>.Ok(data, "Đăng nhập thành công"));
     }
 
     [HttpGet("me")]
     [Authorize]
     public IActionResult Me()
     {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var sub   = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         var email = User.FindFirstValue(JwtRegisteredClaimNames.Email);
-        var perms = User.Claims.Where(c => c.Type == "perm").Select(c => c.Value).ToList();
+        var role  = User.FindFirstValue(ClaimTypes.Role) ?? "unknown";
+        var roleIdStr = User.FindFirstValue("role_id");
+        int.TryParse(roleIdStr, out var roleId);
 
-        return Ok(ApiResult<object>.Ok(new { userId = sub, email, permissions = perms }, "Thông tin người dùng"));
+        var perms = User.Claims.Where(c => c.Type == "perm").Select(c => c.Value).Distinct().ToArray();
+
+        var data = new
+        {
+            userId = sub,
+            email,
+            roleId,
+            role,
+            permissions = perms
+        };
+        return Ok(ApiResponse<object>.Ok(data, "Thông tin người dùng"));
     }
-
-[HttpGet("dev-hash")]
-[AllowAnonymous]
-[SkipApiResponse]
-public IActionResult DevHash([FromQuery] string pwd)
-    => Ok(new { hash = PasswordHasher.Hash(pwd) });
-
-
 }

@@ -7,7 +7,7 @@ namespace PropertyPortal.Common;
 
 public interface IJwtTokenService
 {
-    string CreateToken(long userId, string email, IEnumerable<string> permissions);
+    string CreateToken(long userId, string email, int roleId, string roleName, IEnumerable<string> permissions);
 }
 
 public sealed class JwtTokenService : IJwtTokenService
@@ -15,22 +15,24 @@ public sealed class JwtTokenService : IJwtTokenService
     private readonly IConfiguration _cfg;
     public JwtTokenService(IConfiguration cfg) => _cfg = cfg;
 
-    public string CreateToken(long userId, string email, IEnumerable<string> permissions)
+    public string CreateToken(long userId, string email, int roleId, string roleName, IEnumerable<string> permissions)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_cfg["Jwt:Key"]!));
+        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_cfg["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new(JwtRegisteredClaimNames.Email, email)
+            new(JwtRegisteredClaimNames.Sub,   userId.ToString()),
+            new(JwtRegisteredClaimNames.Email, email),
+            new(ClaimTypes.Role,               roleName),       // role string
+            new("role_id",                     roleId.ToString()) // role id (custom)
         };
         claims.AddRange(permissions.Select(p => new Claim("perm", p)));
 
         var token = new JwtSecurityToken(
-            issuer: _cfg["Jwt:Issuer"],
-            audience: _cfg["Jwt:Audience"],
-            claims: claims,
+            issuer:  _cfg["Jwt:Issuer"],
+            audience:_cfg["Jwt:Audience"],
+            claims:  claims,
             expires: DateTime.UtcNow.AddHours(int.Parse(_cfg["Jwt:ExpiresHours"]!)),
             signingCredentials: creds
         );

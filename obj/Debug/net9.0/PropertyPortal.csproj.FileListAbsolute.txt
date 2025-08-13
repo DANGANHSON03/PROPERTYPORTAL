@@ -116,3 +116,4 @@ C:\Users\anhso\OneDrive\Máy tính\PropertyPortal\obj\Debug\net9.0\PropertyPorta
 C:\Users\anhso\OneDrive\Máy tính\PropertyPortal\obj\Debug\net9.0\ref\PropertyPortal.dll
 C:\Users\anhso\OneDrive\Máy tính\PropertyPortal\bin\Debug\net9.0\Dapper.dll
 C:\Users\anhso\OneDrive\Máy tính\PropertyPortal\bin\Debug\net9.0\Microsoft.Identity.Abstractions.dll
+C:\Users\anhso\OneDrive\Máy tính\PropertyPortal\obj\Debug\net9.0\PropertyPortal.sourcelink.json
