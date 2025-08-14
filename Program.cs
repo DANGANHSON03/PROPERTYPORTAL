@@ -3,8 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-using PropertyPortal.Data;
+using PropertyPortal.Repositories;
 using PropertyPortal.Common;
+using PropertyPortal.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

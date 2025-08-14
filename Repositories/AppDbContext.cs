@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PropertyPortal.Models;
 
-namespace PropertyPortal.Data
+namespace PropertyPortal.Repositories
 {
     public class AppDbContext : DbContext
     {

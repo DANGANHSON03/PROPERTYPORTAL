@@ -5,18 +5,15 @@ using Dapper;
 using Npgsql;
 using Microsoft.Extensions.Configuration;
 
-namespace PropertyPortal.Data
+namespace PropertyPortal.Services
 {
     public interface IPermissionService
     {
         Task<IReadOnlyList<string>> GetPermissionsAsync(long userId);
         Task<(long userId, string email, int roleId, string passwordHash)?> GetUserByEmailAsync(string email);
+        Task<(long userId, string email, int roleId, string passwordHash)?> GetUserByIdAsync(long userId);
     }
 
-    /// <summary>
-    /// Truy vấn dữ liệu phân quyền từ PostgreSQL (schema đã có view: user_permissions_v).
-    /// Yêu cầu package: Dapper, Npgsql.
-    /// </summary>
     public sealed class PermissionService : IPermissionService
     {
         private readonly string _connStr;
@@ -53,9 +50,6 @@ namespace PropertyPortal.Data
             return rows.ToList();
         }
 
-        /// <summary>
-        /// Lấy thông tin user theo email để đăng nhập (id, email, role_id, password_hash)
-        /// </summary>
         public async Task<(long userId, string email, int roleId, string passwordHash)?> GetUserByEmailAsync(string email)
         {
             const string sql = @"
@@ -72,6 +66,21 @@ namespace PropertyPortal.Data
             await using var conn = await OpenAsync();
             var user = await conn.QueryFirstOrDefaultAsync<(long, string, int, string)?>(sql, new { email });
             return user; // null nếu không tìm thấy
+        }
+
+        public async Task<(long userId, string email, int roleId, string passwordHash)?> GetUserByIdAsync(long userId)
+        {
+            const string sql = @"
+            SELECT id AS userId,
+                   email,
+                   role_id AS roleId,
+                   password_hash AS passwordHash
+            FROM ""users""
+            WHERE id = @userId AND is_active = TRUE
+            LIMIT 1;";
+            await using var conn = await OpenAsync();
+            var row = await conn.QueryFirstOrDefaultAsync<(long, string, int, string)?>(sql, new { userId });
+            return row;
         }
     }
 }
